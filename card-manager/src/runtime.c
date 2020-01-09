@@ -343,10 +343,23 @@ void duk_print_stack_size(duk_context* ctx) {
 	}
 }
 
+// Duk Tape Fatal Error Handling.
+// Just printing all Errors to the console, so they will show up in the log
+static void duktape_fatal_handler(void *udata, const char *msg) {
+  (void) udata;  /* ignored in this case, silence warning */
+    /* Note that 'msg' may be NULL. */
+  fprintf(stderr, "*** FATAL ERROR: %s\n", msg ? msg : "no message");
+  fprintf(stderr, "Causing intentional segfault...\n");
+  fflush(stderr);
+  *((volatile unsigned int *) 0) = (unsigned int) 0xdeadbeefUL;
+  abort();
+}
+
+
 // api functions
 /*duktape init*/
 void initRuntime() {
-	ctx = duk_create_heap_default();
+	ctx = duk_create_heap(NULL, NULL, NULL, NULL, duktape_fatal_handler);
 	if (!ctx) {
 		printf("ERROR: unable to create duk_context\n");
 		exit(1);
