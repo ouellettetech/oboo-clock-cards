@@ -24,13 +24,9 @@ endif
 # production code C and CPP files.
 #
 SRC_FILES += example-src/Example.c
+SRC_FILES += example-src/systemFuncs.c
 
-SRCDIR  := ../oboo-runtime/src
-SRCEXT  := c
-
-SOURCES  += $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 SRC_DIRS += example-platform
-SRC_DIRS  += ../oboo-runtime/src
 
 # --- TEST_SRC_FILES and TEST_SRC_DIRS ---
 # Test files are always included in the build.

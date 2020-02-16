@@ -1,15 +1,15 @@
 #include "PrintMock.h"
-#include "CppUTest/TestHarness.h"
+#include "CppUTest/TestHarness_c.h"
 #include <stdio.h>
 #include <stdarg.h>
 #define WINDOWS_VSNPRINTF_OVERWRITE -1
-#if WIN32
+#ifdef WIN32
 #define vsnprintf _vsnprintf
 #endif
 
 #include <stdlib.h>
 static char * mBuffer = 0;
-static size_t mSize = 0;
+static long mSize = 0;
 static int mOffset = 0;
 static int mUsed = 0;
 
@@ -23,7 +23,7 @@ void PrintMock_Create(int size){
 }
 
 int PrintMock(const char * format, ...){
-    int wSize;
+    long wSize;
     va_list args;
     va_start(args, format);
     wSize = vsnprintf(mBuffer + mOffset, mSize - mUsed, format, args);
