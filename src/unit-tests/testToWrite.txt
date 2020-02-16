@@ -1,0 +1,45 @@
+Existing Functions:
+
+native_print "print"
+native_sleep "sleep"
+native_writeFile writeFile"
+native_readFile "readFile"
+native_setGpio "setGpio"
+native_playMp3 "playMP3"
+native_systemCall "system"
+native_systemPopen "popen"
+native_launchProcess "launchProcess"
+native_killProcess "killProcess"
+native_checkProcess "checkProcess"
+native_initCard "initCard"
+native_updateCard "updateCard"
+native_deleteCard "deleteCard"
+
+/* Init message queue functions */
+native_mqConnect "connect"
+native_subscribe "subscribe"
+native_publish "publish"
+
+/* Init Network Functions */
+native_httpRequest "httpRequest"
+  /*
+    options :
+      method
+      url
+      header
+      body
+  */
+
+/* Init Serial Port Functions */
+native_openSerialPort "openSerialPort"
+native_serialWrite "serialWrite"
+native_serialWriteByteArray "serialWriteByteArray"
+native_serialRead "serialRead"
+native_serialReadByteArray "serialReadByteArray"
+
+/* Init Hardware Functions */
+native_setButton "setButton"
+native_setNightLight "setNightLight"
+
+/* Oboo software functions */
+native_updateSystemTime "updateSystemTime"

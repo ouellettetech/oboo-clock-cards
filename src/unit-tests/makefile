@@ -24,7 +24,13 @@ endif
 # production code C and CPP files.
 #
 SRC_FILES += example-src/Example.c
+
+SRCDIR  := ../oboo-runtime/src
+SRCEXT  := c
+
+SOURCES  += $(shell find $(SRCDIR) -type f -name *.$(SRCEXT))
 SRC_DIRS += example-platform
+SRC_DIRS  += ../oboo-runtime/src
 
 # --- TEST_SRC_FILES and TEST_SRC_DIRS ---
 # Test files are always included in the build.
@@ -38,6 +44,7 @@ SRC_DIRS += example-platform
 TEST_SRC_FILES +=
 TEST_SRC_DIRS += tests
 TEST_SRC_DIRS += tests/io-cppumock
+TEST_SRC_DIRS += tests/mocks
 #	tests/example-fff \
 #	tests/fff \
 

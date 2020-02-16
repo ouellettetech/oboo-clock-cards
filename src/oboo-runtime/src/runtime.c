@@ -8,6 +8,7 @@
 #include <curl/curl.h>
 #include "messageQueue.h"
 #include "serialPort.h"
+#include "systemFuncs.h"
 
 //popen
 #include <string.h>
@@ -167,11 +168,11 @@ void destroyRuntime () {
 }
 
 void printHelp () {
-  printf("Oboo Card Runtime.\n\n");
+  print("Oboo Card Runtime.\n\n");
 
-  printf("Usage:\n");
-  printf("\t./runtime <javascript file>\n");
-  printf("\n");
+  print("Usage:\n");
+  print("\t./runtime <javascript file>\n");
+  print("\n");
 }
 
 // find path of binary and copy it to the path argument
@@ -328,7 +329,7 @@ void invokeCallback(char* cbIndex) {
 duk_ret_t native_print(duk_context *ctx) {
   char *initString = (char*) duk_to_string(ctx, 0);
   //TODO: sendto MQTT (initString)
-  printf("%s\n", initString);
+  print("%s\n", initString);
   return 0;  /* no return value (= undefined) */
 }
 
