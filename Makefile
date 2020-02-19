@@ -6,9 +6,11 @@
 #
 
 include $(TOPDIR)/rules.mk
-PKG_NAME:=oboo-clock-cards
-PKG_VERSION:=0.2.9
-PKG_RELEASE:=0
+PKG_NAME    :=oboo-clock-cards
+GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags --long)"
+PKG_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 1)"
+PKG_RELEASE := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 2)"
+PKG_REV     := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f "3 4")"
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
@@ -104,3 +106,12 @@ endef
 
 $(eval $(call BuildPackage,oboo-clock-cards))
 $(eval $(call BuildPackage,oboo-clock-cards-scripts))
+
+
+info:
+	@echo "INFO!"
+	@echo "PKG_NAME=$(PKG_NAME)"
+	@echo "GIT_VERSION=$(GIT_VERSION)"
+	@echo "PKG_VERSION=$(PKG_VERSION)"
+	@echo "PKG_RELEASE=$(PKG_RELEASE)"
+	@echo "PKG_REV=$(PKG_REV)"

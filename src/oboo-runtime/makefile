@@ -156,7 +156,7 @@ endif
 all: resources $(COMPONENT_NAME)
 
 #Rebuild
-rebuild: cleaner all 
+rebuild: clean cleaner all 
 
 #Copy Resources from Resources Directory to Target Directory
 resources: directories
