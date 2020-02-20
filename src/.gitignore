@@ -1,0 +1,13 @@
+*.o
+.built 
+.configured_yyyynnnynn 
+.prepared 
+.quilt_checked 
+.source_dir 
+ipkg-mipsel_24kc/
+node_modules/
+oboo-runtime/bin/
+oboo-runtime/ort
+oboo-runtime/ort_tests
+oboo-runtime/test-lib/
+oboo-runtime/test-obj/
