@@ -6,11 +6,11 @@
 #
 
 include $(TOPDIR)/rules.mk
-PKG_NAME    :=oboo-clock-cards
-GIT_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags --long)"
-PKG_VERSION := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 1)"
-PKG_RELEASE := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 2)"
-PKG_REV     := "$(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f "3 4")"
+PKG_NAME    := oboo-clock-cards
+GIT_VERSION := $(shell git describe --abbrev=7 --dirty --always --tags --long)
+PKG_VERSION := $(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 1)
+PKG_RELEASE := $(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f 2)
+PKG_REV     := $(shell git describe --abbrev=7 --dirty --always --tags --long | cut -d "-" -f "3 4")
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
 
@@ -75,8 +75,8 @@ define Package/oboo-clock-cards/install
 	# install the runtime binary
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oboo-runtime/bin/ort $(1)/usr/bin/
 	# install the js scripts
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oboo-runtime/js/card-lib.js $(1)/usr/bin/js/
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oboo-runtime/js/yahooWeather.js $(1)/usr/bin/js/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oboo-runtime/res/js/card-lib.js $(1)/usr/bin/js/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/oboo-runtime/res/js/yahooWeather.js $(1)/usr/bin/js/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/timer-card/timer.js $(1)/usr/bin/js/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/weather-card/weather.js $(1)/usr/bin/js/
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/calendar-card/calendar.js $(1)/usr/bin/js/
