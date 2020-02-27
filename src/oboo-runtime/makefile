@@ -10,21 +10,45 @@ COMPONENT_NAME      := ort
 # Test Input's
 PROJECT_HOME_DIR = .
 ifeq "$(CPPUTEST_HOME)" ""
-    CPPUTEST_HOME = ~/tools/cpputest
+    CPPUTEST_HOME = ../cpputest
 endif
 
 #Set this to @ to keep the makefile quiet
 SILENCE = @
 
 #Common variables for Direcories and Files.
-SRC_DIRS    := src
-INCDIR      := inc
-BUILDDIR    := obj
-TARGETDIR   := bin
-RESDIR      := res
-SRCEXT      := c
-TESTEXT     := cpp
-OBJEXT      := o
+SRC_DIRS      := src
+INCDIR        := inc
+BUILDDIR      := obj
+TARGETDIR     := bin
+RESDIR        := res
+SRCEXT        := c
+TESTEXT       := c
+OBJEXT        := o
+UNITY_ROOT    =../Unity
+
+RESULT_EXT        := txt
+PATHU             :=../Unity
+PATHS             := src
+PATHT             := test-src
+PATHB             := build
+PATHD             := build/depends
+PATHO             := build/objs
+PATHR             := build/results
+PATH_TEST_RUNNERS := build/test_runners
+
+SRCT = $(wildcard $(PATHT)/*.c)
+
+COMPILE=$(CC) -c
+LINK=$(CC)
+DEPEND=$(CC) -MM -MG -MF
+TEST_CFLAGS :=-I. -I$(PATHU)/src -I$(PATHS) -DTEST
+
+RESULTS = $(patsubst $(PATHT)/Test%.c,$(PATHR)/Test%.txt,$(SRCT) )
+
+PASSED = `grep -s PASS $(PATHR)/*.txt`
+FAIL = `grep -s FAIL $(PATHR)/*.txt`
+IGNORE = `grep -s IGNORE $(PATHR)/*.txt`
 
 # --- TEST_SRC_FILES and TEST_SRC_DIRS ---
 # Test files are always included in the build.
@@ -34,117 +58,30 @@ OBJEXT      := o
 #
 # TEST_SRC_FILES specifies individual test files to build.  
 # TEST_SRC_DIRS, builds everything in the directory
-TEST_SRC_FILES +=
-TEST_SRC_DIRS  += test-src
-TEST_SRC_DIRS  += test-src/mocks
+#TEST_SRC_FILES += $(UNITY_ROOT)/src/unity.c
+#TEST_INC_DIRS  +=-Isrc -I$(UNITY_ROOT)/src
+#TEST_SRC_DIRS  += test-src
 
 # --- MOCKS_SRC_DIRS ---
 # MOCKS_SRC_DIRS specifies a directories where you can put your
 # mocks, stubs and fakes.  You can also just put them
 # in TEST_SRC_DIRS
-MOCKS_SRC_DIRS += test-src/mocks
-
-# Turn on CppUMock
-CPPUTEST_USE_EXTENSIONS = Y
-
-
-
-# INCLUDE_DIRS are searched in order after the included file's
-# containing directory
-INCLUDE_DIRS += $(CPPUTEST_HOME)/include
-INCLUDE_DIRS += $(CPPUTEST_HOME)/include/Platforms/Gcc
-INCLUDE_DIRS += src
-#INCLUDE_DIRS += test-src/exploding-fakes
+#MOCKS_SRC_DIRS += test-src/mocks
 
 #Build Link Flags, and Libraries
 CFLAGS      :=
 LIB         := -lm -lcurl -lmosquitto -pthread
 INC         := -I$(INCDIR) -I . -I duktape
 INCDEP      := -I$(INCDIR)
+TEST_INC    := -Isrc -I$(UNITY_ROOT)/src $(INC)
 
-
-# --- CPPUTEST_OBJS_DIR ---
-# CPPUTEST_OBJS_DIR lets you control where the
-# build artifact (.o and .d) files are stored.
-#
-# If you have to use "../" to get to your source path
-# the makefile will put the .o and .d files in surprising
-# places.
-#
-# To make up for each level of "../"in the source path,
-# add place holder subdirectories to CPPUTEST_OBJS_DIR
-# each.  
-# e.g. if you have "../../src", set to "test-objs/1/2"
-#
-# This is kind of a kludge, but it causes the
-# .o and .d files to be put under objs.
-CPPUTEST_OBJS_DIR = test-obj
-
-CPPUTEST_LIB_DIR = test-lib
-
-# You may have to tweak these compiler flags
-#    CPPUTEST_WARNINGFLAGS - apply to C and C++
-#    CPPUTEST_CFLAGS - apply to C files only
-#    CPPUTEST_CXXFLAGS - apply to C++ files on;y
-#    CPPUTEST_CPPFLAGS - apply to C and C++ Pre-Processor
-#
-# If you get an error like this
-#     TestPlugin.h:93:59: error: 'override' keyword is incompatible
-#        with C++98 [-Werror,-Wc++98-compat] ...
-# The compiler is basically telling you how to fix the
-# build problem.  You would add this flag setting
-#     CPPUTEST_CXXFLAGS += -Wno-c++14-compat
-
-
-
-
-# Some flags to quiet clang
-ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang"), 1)
-CPPUTEST_WARNINGFLAGS += -Wno-unknown-warning-option
-CPPUTEST_WARNINGFLAGS += -Wno-covered-switch-default
-CPPUTEST_WARNINGFLAGS += -Wno-reserved-id-macro
-CPPUTEST_WARNINGFLAGS += -Wno-keyword-macro
-CPPUTEST_WARNINGFLAGS += -Wno-documentation
-CPPUTEST_WARNINGFLAGS += -Wno-missing-noreturn
-endif
-
-CPPUTEST_WARNINGFLAGS += -Wall
-CPPUTEST_WARNINGFLAGS += -Werror
-CPPUTEST_WARNINGFLAGS += -Wfatal-errors
-CPPUTEST_WARNINGFLAGS += -Wswitch-default
-CPPUTEST_WARNINGFLAGS += -Wno-format-nonliteral
-CPPUTEST_WARNINGFLAGS += -Wno-sign-conversion
-CPPUTEST_WARNINGFLAGS += -Wno-pedantic
-CPPUTEST_WARNINGFLAGS += -Wno-shadow
-CPPUTEST_WARNINGFLAGS += -Wno-missing-field-initializers
-CPPUTEST_WARNINGFLAGS += -Wno-unused-parameter
-CPPUTEST_WARNINGFLAGS += -Wno-inconsistent-missing-destructor-override
-CPPUTEST_WARNINGFLAGS += -Wno-disabled-macro-expansion
-CPPUTEST_WARNINGFLAGS += -Wno-used-but-marked-unused
-CPPUTEST_WARNINGFLAGS += -Wno-unused-macros
-
-CPPUTEST_WARNINGFLAGS += -Wno-float-equal
-CPPUTEST_WARNINGFLAGS += -Wno-comma
-CPPUTEST_WARNINGFLAGS += -Wno-double-promotion
-CPPUTEST_WARNINGFLAGS += -Wno-bad-function-cast
-CPPUTEST_WARNINGFLAGS += -Wno-conversion
-CPPUTEST_WARNINGFLAGS += -Wno-conditional-uninitialized
-CPPUTEST_WARNINGFLAGS += -Wno-tentative-definition-incomplete-type
-CPPUTEST_CFLAGS += -pedantic
-CPPUTEST_CFLAGS += -Wno-missing-prototypes
-CPPUTEST_CFLAGS += -Wno-strict-prototypes
-CPPUTEST_CXXFLAGS += -Wno-c++14-compat
-CPPUTEST_CXXFLAGS += --std=c++11
-CPPUTEST_CXXFLAGS += -Wno-c++98-compat-pedantic
-CPPUTEST_CXXFLAGS += -Wno-c++98-compat
-
-CPPUTEST_LDFLAGS += $(LIB)
 #---------------------------------------------------------
 # Build Commands 
 #---------------------------------------------------------
 SRC_FILES      := $(shell find $(SRC_DIRS) -type f -name *.$(SRCEXT))
 #TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name *.$(TESTEXT))
 OBJECTS        := $(patsubst $(SRC_DIRS)/%,$(BUILDDIR)/%,$(SRC_FILES:.$(SRCEXT)=.$(OBJEXT)))
+#TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(BUILDDIR)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
 RESOURCES      := $(shell find $(RESDIR) -type f)
 
 # if running on Mac OS enable debugging.
@@ -153,10 +90,46 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 #Defauilt Make
-all: resources $(COMPONENT_NAME)
+all: info resources test $(COMPONENT_NAME)
+
+test: directories $(RESULTS)
+	@echo "-----------------------\nIGNORES:\n-----------------------"
+	@echo "$(IGNORE)"
+	@echo "-----------------------\nFAILURES:\n-----------------------"
+	@echo "$(FAIL)"
+	@echo "-----------------------\nPASSED:\n-----------------------"
+	@echo "$(PASSED)"
+	@echo "\nDONE"
+
+$(PATHO)/%.o:: $(PATHT)/%.c
+	$(COMPILE) $(TEST_CFLAGS) $< -o $@
+
+$(PATHO)/%.o:: $(PATH_TEST_RUNNERS)/%.c
+	$(COMPILE) $(TEST_CFLAGS) $< -o $@
+
+$(PATHO)/%.o:: $(PATHS)/%.c
+	$(COMPILE) $(TEST_CFLAGS) $< -o $@
+
+$(PATHO)/%.o:: $(PATHU)/src/%.c $(PATHU)/src/%.h
+	$(COMPILE) $(TEST_CFLAGS) $< -o $@
+
+$(PATHD)/%.d:: $(PATHT)/%.c
+	$(DEPEND) $@ $<
+
+# Building Test Runner
+$(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c: $(PATHT)/TestProductionCode2.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
+# Building Test Runner
+$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATHT)/TestProductionCode.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode.c $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
+
+#ruby ../Unity/auto/generate_test_runner.rb test-src/TestProductionCode.c  build/test_runners/TestProductionCode_Runner.c
+# Building Test Runner
+#$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATHT)/Test%.c
+#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/Test%.c  $(PATH_TEST_RUNNERS)/Test%_Runner.c
 
 #Rebuild
-rebuild: clean cleaner all 
+rebuild: clean all 
 
 #Copy Resources from Resources Directory to Target Directory
 resources: directories
@@ -168,20 +141,37 @@ endif
 directories:
 	@mkdir -p $(TARGETDIR)
 	@mkdir -p $(BUILDDIR)
+	@mkdir -p $(PATH_TEST_RUNNERS)
+	@mkdir -p $(PATHB)
+	@mkdir -p $(PATHD)
+	@mkdir -p $(PATHO)
+	@mkdir -p $(PATHR)
 
 #Clean all Objects and Binaries
-cleaner:
+clean:
 	@$(RM) -rf $(BUILDDIR)
 	@$(RM) -rf $(TARGETDIR)
+	@$(RM) -rf $(PATHO)/*.o
+	@$(RM) -rf $(PATHB)/*
+	@$(RM) -rf $(PATHR)/*.txt
 
 #Pull in dependency info for *existing* .o files
 -include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
 
 #Link
 $(COMPONENT_NAME): $(OBJECTS)
-	@echo " Linking... $^"
 	@mkdir -p $(TARGETDIR)
+	@echo "Build with $(CC)"
+	@echo " Linking... $^"
 	$(CC) -o $(TARGETDIR)/$(COMPONENT_NAME) $^ $(LIB)
+
+$(PATHR)/Test%.txt: $(PATHB)/Test%
+	echo "PASS 5" > $@ 2>&1
+#	#-./$< > $@ 2>&1
+
+#Link Test Code.
+$(PATHB)/Test%: $(PATHO)/Test%.$(OBJEXT) $(PATHO)/Test%_Runner.$(OBJEXT) $(PATHO)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATHD)Test%.d
+	$(LINK) -o $(PATHB)/% $^
 
 #Compile
 $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
@@ -194,17 +184,9 @@ $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
 	@sed -e 's/.*://' -e 's/\\$$//' < $(BUILDDIR)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(BUILDDIR)/$*.$(DEPEXT)
 	@rm -f $(BUILDDIR)/$*.$(DEPEXT).tmp
 
+
 #Non-File Targets
-.PHONY: all remake clean cleaner resources
-
-
-
-#test: CFLAGS += -D MAC_DEBUG=1 -g -O0 -ggdb3
-#
-#test: all
-#	service mosquitto start
-#	cp bin/ort .
-#	./ort ../test/buffer.js
+.PHONY: all remake clean resources
 
 info:
 	@echo "INFO!"
@@ -215,8 +197,12 @@ info:
 	@echo "LDFLAGS=$(LDFLAGS)"
 	@echo "LIB=$(LIB)"
 	@echo "RESOURCES=$(RESOURCES)"
+	@echo "BUILD_PATHS=$(BUILD_PATHS)"
+	@echo "RESULTS=$(RESULTS)"
+	@echo "PATHR=$(PATHR)"
+	@echo "Result command: $(PATHR)/%.$(RESULT_EXT): $(PATHB)/%"
 
-
-# Look at $(CPPUTEST_HOME)/build/MakefileWorker.mk for more controls
-
-include $(CPPUTEST_HOME)/build/MakefileWorker.mk
+.PRECIOUS: $(PATHB)/Test%
+.PRECIOUS: $(PATHD)/%.d
+.PRECIOUS: $(PATHO)/%.o
+.PRECIOUS: $(PATHR)/%.txt
