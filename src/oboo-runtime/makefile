@@ -9,23 +9,20 @@ COMPONENT_NAME      := ort
 
 # Test Input's
 PROJECT_HOME_DIR = .
-ifeq "$(CPPUTEST_HOME)" ""
-    CPPUTEST_HOME = ../cpputest
-endif
 
 #Set this to @ to keep the makefile quiet
 SILENCE = @
 
 #Common variables for Direcories and Files.
-SRC_DIRS      := src
-INCDIR        := inc
-BUILDDIR      := obj
-TARGETDIR     := bin
-RESDIR        := res
-SRCEXT        := c
-TESTEXT       := c
-OBJEXT        := o
-UNITY_ROOT    =../Unity
+SRC_DIRS          := src
+INCDIR            := inc
+BUILDDIR          := obj
+TARGETDIR         := bin
+RESDIR            := res
+SRCEXT            := c
+TESTEXT           := c
+OBJEXT            := o
+UNITY_ROOT        =../Unity
 
 RESULT_EXT        := txt
 PATHU             :=../Unity
@@ -98,8 +95,9 @@ test: directories $(RESULTS)
 	@echo "-----------------------\nFAILURES:\n-----------------------"
 	@echo "$(FAIL)"
 	@echo "-----------------------\nPASSED:\n-----------------------"
-	@echo "$(PASSED)"
+	@echo "$(PASSED)" 
 	@echo "\nDONE"
+	! grep -s FAIL $(PATHR)/*.txt
 
 $(PATHO)/%.o:: $(PATHT)/%.c
 	$(COMPILE) $(TEST_CFLAGS) $< -o $@
@@ -115,18 +113,6 @@ $(PATHO)/%.o:: $(PATHU)/src/%.c $(PATHU)/src/%.h
 
 $(PATHD)/%.d:: $(PATHT)/%.c
 	$(DEPEND) $@ $<
-
-# Building Test Runner
-$(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c: $(PATHT)/TestProductionCode2.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
-# Building Test Runner
-$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATHT)/TestProductionCode.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode.c $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
-
-#ruby ../Unity/auto/generate_test_runner.rb test-src/TestProductionCode.c  build/test_runners/TestProductionCode_Runner.c
-# Building Test Runner
-#$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATHT)/Test%.c
-#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/Test%.c  $(PATH_TEST_RUNNERS)/Test%_Runner.c
 
 #Rebuild
 rebuild: clean all 
@@ -165,13 +151,31 @@ $(COMPONENT_NAME): $(OBJECTS)
 	@echo " Linking... $^"
 	$(CC) -o $(TARGETDIR)/$(COMPONENT_NAME) $^ $(LIB)
 
-$(PATHR)/Test%.txt: $(PATHB)/Test%
+$(PATHR)/Test%.txt: $(PATHB)/test%
 	echo "PASS 5" > $@ 2>&1
 #	#-./$< > $@ 2>&1
 
+
+# Building Test Runner
+$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATHT)/TestProductionCode.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode.c $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
+$(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c: $(PATHT)/TestProductionCode2.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
+
+# Building Test Runner
+#$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATHT)/TestProductionCode.c
+#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/TestProductionCode.c $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
+#
+#ruby ../Unity/auto/generate_test_runner.rb test-src/TestProductionCode.c  build/test_runners/TestProductionCode_Runner.c
+# Building Test Runner
+#$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATHT)/Test%.c
+#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATHT)/Test%.c  $(PATH_TEST_RUNNERS)/Test%_Runner.c
+
+
 #Link Test Code.
-$(PATHB)/Test%: $(PATHO)/Test%.$(OBJEXT) $(PATHO)/Test%_Runner.$(OBJEXT) $(PATHO)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATHD)Test%.d
-	$(LINK) -o $(PATHB)/% $^
+$(PATHB)/test%: $(PATHO)/Test%.$(OBJEXT) $(PATHO)/Test%_Runner.$(OBJEXT) $(PATHO)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATHD)Test%.d
+	@echo "Linking Test.... $(PATHB)/$@"
+	$(LINK) -o $@ $^
 
 #Compile
 $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
@@ -202,7 +206,7 @@ info:
 	@echo "PATHR=$(PATHR)"
 	@echo "Result command: $(PATHR)/%.$(RESULT_EXT): $(PATHB)/%"
 
-.PRECIOUS: $(PATHB)/Test%
+.PRECIOUS: $(PATHB)/test%
 .PRECIOUS: $(PATHD)/%.d
 .PRECIOUS: $(PATHO)/%.o
 .PRECIOUS: $(PATHR)/%.txt
