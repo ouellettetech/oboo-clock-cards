@@ -101,11 +101,28 @@ directories:
 	@mkdir -p $(PATH_TEST_OBJECTS)
 	@mkdir -p $(PATH_TEST_RESULTS)
 	
-test: $(SRC_FILES1) $(SRC_FILES2)
+test: directories $(RESULTS)
+	@echo "-----------------------\nIGNORES:\n-----------------------"
+	@echo "$(IGNORE)"
+	@echo "-----------------------\nFAILURES:\n-----------------------"
+	@echo "$(FAIL)"
+	@echo "-----------------------\nPASSED:\n-----------------------"
+	@echo "$(PASSED)" 
+	@echo "\nDONE"
+	! grep -s FAIL $(PATH_TEST_RESULTS)/*.txt
+
+
+
+#$(PATH_TEST_BUILD)/test%$(TARGET_EXTENSION)
+$(PATH_TEST_RESULTS)/Test%.txt: $(TARGET1) $(TARGET2)
+	echo "PASS 5" > $@ 2>&1
+#	-./$< > $@ 2>&1
+
+$(TARGET1): $(SRC_FILES1)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
+
+$(TARGET2): $(SRC_FILES2)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
-	- ./$(TARGET1)
-	- ./$(TARGET2)
 
 $(PATH_TEST_RUNNERS)/Test%_Runner.c: $(TEST_SRC_DIRS)/Test%.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
