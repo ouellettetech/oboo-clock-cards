@@ -40,14 +40,12 @@ OBJEXT            := o
 DEPEXT            := d
 RESULT_EXT        := txt
 UNITY_ROOT        =../Unity
-PATH_TEST_SRC     := test-src
+TEST_SRC_DIRS     := test-src
 PATH_TEST_BUILD   := build
 PATH_TEST_DEPS    := build/depends
 PATH_TEST_OBJECTS := build/objs
 PATH_TEST_RESULTS := build/results
 PATH_TEST_RUNNERS := build/test_runners
-
-RESULTS = $(patsubst $(PATH_TEST_SRC)/Test%.c,$(PATH_TEST_RESULTS)/Test%.txt,$(TEST_SRC_FILES) )
 
 PASSED = `grep -s PASS $(PATH_TEST_RESULTS)/*.txt`
 FAIL = `grep -s FAIL $(PATH_TEST_RESULTS)/*.txt`
@@ -57,7 +55,7 @@ IGNORE = `grep -s IGNORE $(PATH_TEST_RESULTS)/*.txt`
 # MOCKS_SRC_DIRS specifies a directories where you can put your
 # mocks, stubs and fakes.  You can also just put them
 # in TEST_SRC_DIRS
-#MOCKS_SRC_DIRS += test-src/mocks
+MOCKS_SRC_DIRS += test-src/mocks
 
 #Build Link Flags, and Libraries
 CFLAGS      :=
@@ -70,12 +68,28 @@ TARGET_BASE1=test1
 TARGET_BASE2=test2
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
-SRC_FILES1=$(UNITY_ROOT)/src/unity.c src/ProductionCode.c  $(PATH_TEST_SRC)/TestProductionCode.c  $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
-SRC_FILES2=$(UNITY_ROOT)/src/unity.c src/ProductionCode2.c $(PATH_TEST_SRC)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
+SRC_FILES1=$(UNITY_ROOT)/src/unity.c src/ProductionCode.c  $(TEST_SRC_DIRS)/TestProductionCode.c  $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
+SRC_FILES2=$(UNITY_ROOT)/src/unity.c src/ProductionCode2.c $(TEST_SRC_DIRS)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
 INC_DIRS=-Isrc -I$(UNITY_ROOT)/src
 SYMBOLS=
 
-all: clean directories default
+#---------------------------------------------------------
+# Build Commands 
+#---------------------------------------------------------
+SRC_FILES      := $(shell find $(SRC_DIRS) -type f -name *.$(SRCEXT))
+TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name Test*.$(TESTEXT))
+OBJECTS        := $(patsubst $(SRC_DIRS)/%,$(BUILDDIR)/%,$(SRC_FILES:.$(SRCEXT)=.$(OBJEXT)))
+TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_OBJECTS)/%,$(SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
+RESOURCES      := $(shell find $(RESDIR) -type f)
+RESULTS        := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RESULTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(RESULT_EXT)))
+
+
+# if running on Mac OS enable debugging.
+ifeq ($(UNAME_S),Darwin)
+	CFLAGS += -D MAC_DEBUG=1
+endif
+
+all: info clean directories default
 
 #Make the Directories
 directories:
@@ -93,7 +107,7 @@ default: $(SRC_FILES1) $(SRC_FILES2)
 	- ./$(TARGET1)
 	- ./$(TARGET2)
 
-$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATH_TEST_SRC)/Test%.c
+$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(TEST_SRC_DIRS)/Test%.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
 
 clean:
@@ -103,6 +117,23 @@ clean:
 	@$(CLEANUP) $(PATH_TEST_BUILD)/*
 	@$(CLEANUP) $(PATH_TEST_RESULTS)/*.txt
 	@$(CLEANUP) $(TARGET1) $(TARGET2)
+
+info:
+	@echo "INFO!"
+	@echo "SOURCES=$(SRC_FILES)"
+	@echo "TEST_SRC_FILES=$(TEST_SRC_FILES)"
+	@echo "OBJECTS=$(OBJECTS)"
+	@echo "TEST_OBJECTS=$(TEST_OBJECTS)"
+	@echo "CC=$(CC)"
+	@echo "CFLAGS=$(CFLAGS)"
+	@echo "LDFLAGS=$(LDFLAGS)"
+	@echo "LIB=$(LIB)"
+	@echo "RESOURCES=$(RESOURCES)"
+	@echo "BUILD_PATHS=$(BUILD_PATHS)"
+	@echo "RESULTS=$(RESULTS)"
+	@echo "PATH_TEST_RESULTS=$(PATH_TEST_RESULTS)"
+	@echo "Result command: $(PATH_TEST_RESULTS)/%.$(RESULT_EXT): $(PATH_TEST_BUILD)/%"
+	@echo "UNAME_S= $(UNAME_S)"
 
 ci: CFLAGS += -Werror
 ci: default
