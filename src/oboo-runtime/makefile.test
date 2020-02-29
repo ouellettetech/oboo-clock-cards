@@ -47,21 +47,24 @@ PATH_TEST_OBJECTS := build/objs
 PATH_TEST_RESULTS := build/results
 PATH_TEST_RUNNERS := build/test_runners
 
-CFLAGS=-std=c89
-CFLAGS += -Wall
-CFLAGS += -Wextra
-CFLAGS += -Wpointer-arith
-CFLAGS += -Wcast-align
-CFLAGS += -Wwrite-strings
-CFLAGS += -Wswitch-default
-CFLAGS += -Wunreachable-code
-CFLAGS += -Winit-self
-CFLAGS += -Wmissing-field-initializers
-CFLAGS += -Wno-unknown-pragmas
-CFLAGS += -Wstrict-prototypes
-CFLAGS += -Wundef
-CFLAGS += -Wold-style-definition
-#CFLAGS += -Wno-misleading-indentation
+RESULTS = $(patsubst $(PATH_TEST_SRC)/Test%.c,$(PATH_TEST_RESULTS)/Test%.txt,$(TEST_SRC_FILES) )
+
+PASSED = `grep -s PASS $(PATH_TEST_RESULTS)/*.txt`
+FAIL = `grep -s FAIL $(PATH_TEST_RESULTS)/*.txt`
+IGNORE = `grep -s IGNORE $(PATH_TEST_RESULTS)/*.txt`
+
+# --- MOCKS_SRC_DIRS ---
+# MOCKS_SRC_DIRS specifies a directories where you can put your
+# mocks, stubs and fakes.  You can also just put them
+# in TEST_SRC_DIRS
+#MOCKS_SRC_DIRS += test-src/mocks
+
+#Build Link Flags, and Libraries
+CFLAGS      :=
+LIB         := -lm -lcurl -lmosquitto -pthread
+INC         := -I$(INCDIR) -I . -I duktape
+INCDEP      := -I$(INCDIR)
+TEST_INC    := -I$(SRC_DIRS) -I$(UNITY_ROOT)/src $(INC) -DTEST
 
 TARGET_BASE1=test1
 TARGET_BASE2=test2
