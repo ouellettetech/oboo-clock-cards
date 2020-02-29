@@ -13,12 +13,12 @@ ifeq ($(OS),Windows_NT)
 	CLEANUP = del /F /Q
 	MKDIR = mkdir
   else # in a bash-like shell, like msys
-	CLEANUP = rm -f
+	CLEANUP = rm -rf
 	MKDIR = mkdir -p
   endif
 	TARGET_EXTENSION=.exe
 else
-	CLEANUP = rm -f
+	CLEANUP = rm -rf
 	MKDIR = mkdir -p
 	TARGET_EXTENSION=
 endif
@@ -94,7 +94,12 @@ $(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATH_TEST_SRC)/Test%.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
 
 clean:
-	$(CLEANUP) $(TARGET1) $(TARGET2)
+	@$(CLEANUP) $(BUILDDIR)
+	@$(CLEANUP) $(TARGETDIR)
+	@$(CLEANUP) $(PATH_TEST_OBJECTS)/*.o
+	@$(CLEANUP) $(PATH_TEST_BUILD)/*
+	@$(CLEANUP) $(PATH_TEST_RESULTS)/*.txt
+	@$(CLEANUP) $(TARGET1) $(TARGET2)
 
 ci: CFLAGS += -Werror
 ci: default
