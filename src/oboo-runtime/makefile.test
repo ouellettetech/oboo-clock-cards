@@ -89,7 +89,7 @@ ifeq ($(UNAME_S),Darwin)
 	CFLAGS += -D MAC_DEBUG=1
 endif
 
-all: info clean directories default
+all: info resources test $(COMPONENT_NAME)
 
 #Make the Directories
 directories:
@@ -101,7 +101,7 @@ directories:
 	@mkdir -p $(PATH_TEST_OBJECTS)
 	@mkdir -p $(PATH_TEST_RESULTS)
 	
-default: $(SRC_FILES1) $(SRC_FILES2)
+test: $(SRC_FILES1) $(SRC_FILES2)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
 	- ./$(TARGET1)
@@ -134,6 +134,25 @@ info:
 	@echo "PATH_TEST_RESULTS=$(PATH_TEST_RESULTS)"
 	@echo "Result command: $(PATH_TEST_RESULTS)/%.$(RESULT_EXT): $(PATH_TEST_BUILD)/%"
 	@echo "UNAME_S= $(UNAME_S)"
+
+#Copy Resources from Resources Directory to Target Directory
+resources: directories
+ifneq ($(RESOURCES),)
+	@cp -r $(RESDIR)/* $(TARGETDIR)/
+endif
+
+#Link
+$(COMPONENT_NAME): $(OBJECTS)
+	@mkdir -p $(TARGETDIR)
+	@echo "Build with $(CC)"
+	@echo " Linking... $^"
+	$(CC) -o $(TARGETDIR)/$(COMPONENT_NAME) $^ $(LIB)
+
+#Compile
+$(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling....  $@"
+	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
 
 ci: CFLAGS += -Werror
 ci: default
