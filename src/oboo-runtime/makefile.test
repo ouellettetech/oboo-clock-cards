@@ -26,6 +26,14 @@ C_COMPILER=clang
 endif
 
 UNITY_ROOT=../Unity
+PATH_TEST_SRC     := test-src
+PATH_TEST_BUILD   := build
+PATH_TEST_DEPS    := build/depends
+PATH_TEST_OBJECTS := build/objs
+PATH_TEST_RESULTS := build/results
+PATH_TEST_RUNNERS := build/test_runners
+TARGETDIR         := bin
+BUILDDIR          := obj
 
 CFLAGS=-std=c89
 CFLAGS += -Wall
@@ -47,23 +55,31 @@ TARGET_BASE1=test1
 TARGET_BASE2=test2
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
-SRC_FILES1=$(UNITY_ROOT)/src/unity.c src/ProductionCode.c  test-src/TestProductionCode.c  test-src/test_runners/TestProductionCode_Runner.c
-SRC_FILES2=$(UNITY_ROOT)/src/unity.c src/ProductionCode2.c test-src/TestProductionCode2.c test-src/test_runners/TestProductionCode2_Runner.c
+SRC_FILES1=$(UNITY_ROOT)/src/unity.c src/ProductionCode.c  $(PATH_TEST_SRC)/TestProductionCode.c  $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
+SRC_FILES2=$(UNITY_ROOT)/src/unity.c src/ProductionCode2.c $(PATH_TEST_SRC)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
 INC_DIRS=-Isrc -I$(UNITY_ROOT)/src
 SYMBOLS=
 
-all: clean default
+all: clean directories default
 
+#Make the Directories
+directories:
+	@mkdir -p $(TARGETDIR)
+	@mkdir -p $(BUILDDIR)
+	@mkdir -p $(PATH_TEST_RUNNERS)
+	@mkdir -p $(PATH_TEST_BUILD)
+	@mkdir -p $(PATH_TEST_DEPS)
+	@mkdir -p $(PATH_TEST_OBJECTS)
+	@mkdir -p $(PATH_TEST_RESULTS)
+	
 default: $(SRC_FILES1) $(SRC_FILES2)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
 	- ./$(TARGET1)
 	- ./$(TARGET2)
 
-test-src/test_runners/TestProductionCode_Runner.c: test-src/TestProductionCode.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb test-src/TestProductionCode.c  test-src/test_runners/TestProductionCode_Runner.c
-test-src/test_runners/TestProductionCode2_Runner.c: test-src/TestProductionCode2.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb test-src/TestProductionCode2.c test-src/test_runners/TestProductionCode2_Runner.c
+$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATH_TEST_SRC)/Test%.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
 
 clean:
 	$(CLEANUP) $(TARGET1) $(TARGET2)
