@@ -1,12 +1,15 @@
-# ==========================================
-#   Unity Project - A Test Framework for C
-#   Copyright (c) 2007 Mike Karlesky, Mark VanderVoord, Greg Williams
-#   [Released under MIT License. Please refer to license.txt for details]
-# ==========================================
+# find the os
+UNAME_S           := $(shell uname -s)
+
+#The Target Binary Program
+COMPONENT_NAME    := ort
+
+#Set this to @ to keep the makefile quiet
+#SILENCE = @
 
 #We try to detect the OS we are running on, and adjust commands as needed
 ifeq ($(OS),Windows_NT)
-  ifeq ($(shell uname -s),) # not in a bash-like shell
+  ifeq ($(UNAME_S),) # not in a bash-like shell
 	CLEANUP = del /F /Q
 	MKDIR = mkdir
   else # in a bash-like shell, like msys
@@ -17,23 +20,32 @@ ifeq ($(OS),Windows_NT)
 else
 	CLEANUP = rm -f
 	MKDIR = mkdir -p
-	TARGET_EXTENSION=.out
+	TARGET_EXTENSION=
 endif
 
 C_COMPILER=gcc
-ifeq ($(shell uname -s), Darwin)
+ifeq ($(UNAME_S), Darwin)
 C_COMPILER=clang
 endif
 
-UNITY_ROOT=../Unity
+#Common variables for Direcories and Files.
+SRC_DIRS          := src
+INCDIR            := inc
+BUILDDIR          := obj
+TARGETDIR         := bin
+RESDIR            := res
+SRCEXT            := c
+TESTEXT           := c
+OBJEXT            := o
+DEPEXT            := d
+RESULT_EXT        := txt
+UNITY_ROOT        =../Unity
 PATH_TEST_SRC     := test-src
 PATH_TEST_BUILD   := build
 PATH_TEST_DEPS    := build/depends
 PATH_TEST_OBJECTS := build/objs
 PATH_TEST_RESULTS := build/results
 PATH_TEST_RUNNERS := build/test_runners
-TARGETDIR         := bin
-BUILDDIR          := obj
 
 CFLAGS=-std=c89
 CFLAGS += -Wall
