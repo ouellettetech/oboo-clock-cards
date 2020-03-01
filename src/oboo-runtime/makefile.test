@@ -64,12 +64,10 @@ INC         := -I$(INCDIR) -I . -I duktape
 INCDEP      := -I$(INCDIR)
 TEST_INC    := -I$(SRC_DIRS) -I$(UNITY_ROOT)/src $(INC) -DTEST
 
-TARGET_BASE1=test1
-TARGET_BASE2=test2
+TARGET_BASE1=TestProductionCode
+TARGET_BASE2=TestProductionCode2
 TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
 TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
-SRC_FILES1=$(UNITY_ROOT)/src/unity.c src/ProductionCode.c  $(TEST_SRC_DIRS)/TestProductionCode.c  $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
-SRC_FILES2=$(UNITY_ROOT)/src/unity.c src/ProductionCode2.c $(TEST_SRC_DIRS)/TestProductionCode2.c $(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c
 INC_DIRS=-Isrc -I$(UNITY_ROOT)/src
 SYMBOLS=
 
@@ -77,7 +75,7 @@ SYMBOLS=
 # Build Commands 
 #---------------------------------------------------------
 SRC_FILES      := $(shell find $(SRC_DIRS) -type f -name *.$(SRCEXT))
-TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name Test*.$(TESTEXT))
+TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name Test*.$(TESTEXT) | grep -v _Runner.$(OBJEXT))
 TEST_RUNNERS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RUNNERS)/%,$(TEST_SRC_FILES:.$(SRCEXT)=_Runner.$(OBJEXT)))
 OBJECTS        := $(patsubst $(SRC_DIRS)/%,$(BUILDDIR)/%,$(SRC_FILES:.$(SRCEXT)=.$(OBJEXT)))
 TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_OBJECTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
@@ -116,21 +114,14 @@ test: directories $(RESULTS)
 
 
 #$(PATH_TEST_BUILD)/test%$(TARGET_EXTENSION)
-$(PATH_TEST_RESULTS)/Test%.txt: $(TARGET1) $(TARGET2)
+$(PATH_TEST_RESULTS)/Test%.txt: $(RESULTS)
 	echo "PASS 5" > $@ 2>&1
 #	-./$< > $@ 2>&1
 
 #Link Test Code.
-$(PATH_TEST_BUILD)/Test%$(TARGET_EXTENSION) : $(PATH_TEST_OBJECTS)/Test%.$(OBJEXT) $(PATH_TEST_OBJECTS)/Test%_Runner.$(OBJEXT) $(PATH_TEST_OBJECTS)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATH_TEST_DEPS)Test%.$(DEPEXT)
+$(PATH_TEST_BUILD)/Test%$(TARGET_EXTENSION) : $(PATH_TEST_OBJECTS)/Test%.$(OBJEXT) $(PATH_TEST_OBJECTS)/test_runners/Test%_Runner.$(OBJEXT) $(PATH_TEST_OBJECTS)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATH_TEST_DEPS)Test%.$(DEPEXT)
 	@echo "Linking Test.... $(PATH_TEST_BUILD)/$@"
 	$(CC) -o $@ $^
-
-
-# $(TARGET1): $(SRC_FILES1)
-# 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
-
-# $(TARGET2): $(SRC_FILES2)
-# 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
 
 $(PATH_TEST_RUNNERS)/Test%_Runner.c: $(TEST_SRC_DIRS)/Test%.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
@@ -160,7 +151,7 @@ info:
 	@echo "Result command: $(PATH_TEST_RESULTS)/%.$(RESULT_EXT): $(PATH_TEST_BUILD)/%"
 	@echo "UNAME_S= $(UNAME_S)"
 	@echo "TEST_RUNNERS= $(TEST_RUNNERS)"
-	@echo "Object Rule: $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)"
+	@echo "Result Rule: $(PATH_TEST_RESULTS)/Test%.txt: $(TARGET1) $(TARGET2)"
 
 #Copy Resources from Resources Directory to Target Directory
 resources: directories
@@ -187,6 +178,10 @@ $(PATH_TEST_OBJECTS)/%.$(OBJEXT): $(TEST_SRC_DIRS)/%.$(TESTEXT)
 	@echo " Compiling Test....  $@"
 	$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
 
+$(PATH_TEST_OBJECTS)/unity.$(OBJEXT): $(UNITY_ROOT)/src/unity.$(TESTEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling Test....  $@"
+	$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
 
 ci: CFLAGS += -Werror
 ci: default
