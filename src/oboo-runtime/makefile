@@ -1,17 +1,32 @@
 # find the os
 UNAME_S           := $(shell uname -s)
 
-#Compiler and Linker depending on OS
-CC                := cc 
-
 #The Target Binary Program
 COMPONENT_NAME    := ort
 
-# Test Input's
-PROJECT_HOME_DIR   = .
-
 #Set this to @ to keep the makefile quiet
-SILENCE = @
+#SILENCE = @
+
+#We try to detect the OS we are running on, and adjust commands as needed
+ifeq ($(OS),Windows_NT)
+  ifeq ($(UNAME_S),) # not in a bash-like shell
+	CLEANUP = del /F /Q
+	MKDIR = mkdir
+  else # in a bash-like shell, like msys
+	CLEANUP = rm -rf
+	MKDIR = mkdir -p
+  endif
+	TARGET_EXTENSION=.exe
+else
+	CLEANUP = rm -rf
+	MKDIR = mkdir -p
+	TARGET_EXTENSION=
+endif
+
+C_COMPILER=gcc
+ifeq ($(UNAME_S), Darwin)
+C_COMPILER=clang
+endif
 
 #Common variables for Direcories and Files.
 SRC_DIRS          := src
@@ -25,14 +40,12 @@ OBJEXT            := o
 DEPEXT            := d
 RESULT_EXT        := txt
 UNITY_ROOT        =../Unity
-PATH_TEST_SRC     := test-src
+TEST_SRC_DIRS     := test-src
 PATH_TEST_BUILD   := build
 PATH_TEST_DEPS    := build/depends
 PATH_TEST_OBJECTS := build/objs
 PATH_TEST_RESULTS := build/results
-PATH_TEST_RUNNERS := build/test_runners
-
-RESULTS = $(patsubst $(PATH_TEST_SRC)/Test%.c,$(PATH_TEST_RESULTS)/Test%.txt,$(TEST_SRC_FILES) )
+PATH_TEST_RUNNERS := test-src/test_runners
 
 PASSED = `grep -s PASS $(PATH_TEST_RESULTS)/*.txt`
 FAIL = `grep -s FAIL $(PATH_TEST_RESULTS)/*.txt`
@@ -42,7 +55,7 @@ IGNORE = `grep -s IGNORE $(PATH_TEST_RESULTS)/*.txt`
 # MOCKS_SRC_DIRS specifies a directories where you can put your
 # mocks, stubs and fakes.  You can also just put them
 # in TEST_SRC_DIRS
-#MOCKS_SRC_DIRS += test-src/mocks
+MOCKS_SRC_DIRS += test-src/mocks
 
 #Build Link Flags, and Libraries
 CFLAGS      :=
@@ -51,40 +64,32 @@ INC         := -I$(INCDIR) -I . -I duktape
 INCDEP      := -I$(INCDIR)
 TEST_INC    := -I$(SRC_DIRS) -I$(UNITY_ROOT)/src $(INC) -DTEST
 
+TARGET_BASE1=TestProductionCode
+TARGET_BASE2=TestProductionCode2
+TARGET1 = $(TARGET_BASE1)$(TARGET_EXTENSION)
+TARGET2 = $(TARGET_BASE2)$(TARGET_EXTENSION)
+INC_DIRS=-Isrc -I$(UNITY_ROOT)/src
+SYMBOLS=
+
 #---------------------------------------------------------
 # Build Commands 
 #---------------------------------------------------------
 SRC_FILES      := $(shell find $(SRC_DIRS) -type f -name *.$(SRCEXT))
-TEST_SRC_FILES += $(shell find $(PATH_TEST_SRC) -type f -name *.$(TESTEXT))
+TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name Test*.$(TESTEXT) | grep -v _Runner.$(OBJEXT))
+TEST_RUNNERS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RUNNERS)/%,$(TEST_SRC_FILES:.$(SRCEXT)=_Runner.$(OBJEXT)))
 OBJECTS        := $(patsubst $(SRC_DIRS)/%,$(BUILDDIR)/%,$(SRC_FILES:.$(SRCEXT)=.$(OBJEXT)))
+TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_OBJECTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
+TEST_OBJECTS   += $(patsubst $(PATH_TEST_RUNNERS)/%,$(PATH_TEST_OBJECTS)/%,$(TEST_RUNNERS:.$(TESTEXT)=.$(OBJEXT)))
 RESOURCES      := $(shell find $(RESDIR) -type f)
+RESULTS        := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RESULTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(RESULT_EXT)))
+vpath _Runner.$(OBJEXT) $(PATH_TEST_RUNNERS)
 
 # if running on Mac OS enable debugging.
 ifeq ($(UNAME_S),Darwin)
 	CFLAGS += -D MAC_DEBUG=1
 endif
 
-#Defauilt Make
 all: info resources test $(COMPONENT_NAME)
-
-test: directories $(RESULTS)
-	@echo "-----------------------\nIGNORES:\n-----------------------"
-	@echo "$(IGNORE)"
-	@echo "-----------------------\nFAILURES:\n-----------------------"
-	@echo "$(FAIL)"
-	@echo "-----------------------\nPASSED:\n-----------------------"
-	@echo "$(PASSED)" 
-	@echo "\nDONE"
-	! grep -s FAIL $(PATH_TEST_RESULTS)/*.txt
-
-#Rebuild
-rebuild: clean all 
-
-#Copy Resources from Resources Directory to Target Directory
-resources: directories
-ifneq ($(RESOURCES),)
-	@cp -r $(RESDIR)/* $(TARGETDIR)/
-endif
 
 #Make the Directories
 directories:
@@ -95,101 +100,46 @@ directories:
 	@mkdir -p $(PATH_TEST_DEPS)
 	@mkdir -p $(PATH_TEST_OBJECTS)
 	@mkdir -p $(PATH_TEST_RESULTS)
+	
+test: directories $(RESULTS)
+	@echo "-----------------------\nIGNORES:\n-----------------------"
+	@echo "$(IGNORE)"
+	@echo "-----------------------\nFAILURES:\n-----------------------"
+	@echo "$(FAIL)"
+	@echo "-----------------------\nPASSED:\n-----------------------"
+	@echo "$(PASSED)" 
+	@echo "\nDONE"
+	! grep -s FAIL $(PATH_TEST_RESULTS)/*.txt
 
-#Clean all Objects and Binaries
-clean:
-	@$(RM) -rf $(BUILDDIR)
-	@$(RM) -rf $(TARGETDIR)
-	@$(RM) -rf $(PATH_TEST_OBJECTS)/*.o
-	@$(RM) -rf $(PATH_TEST_BUILD)/*
-	@$(RM) -rf $(PATH_TEST_RESULTS)/*.txt
 
-#Pull in dependency info for *existing* .o files
--include $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
 
-#Link
-$(COMPONENT_NAME): $(OBJECTS)
-	@mkdir -p $(TARGETDIR)
-	@echo "Build with $(CC)"
-	@echo " Linking... $^"
-	$(CC) -o $(TARGETDIR)/$(COMPONENT_NAME) $^ $(LIB)
-
-$(PATH_TEST_RESULTS)/Test%.txt: $(PATH_TEST_BUILD)/test%
+#$(PATH_TEST_BUILD)/test%$(TARGET_EXTENSION)
+$(PATH_TEST_RESULTS)/Test%.txt: $(RESULTS)
 	echo "PASS 5" > $@ 2>&1
-#	#-./$< > $@ 2>&1
-
-
-# Building Test Runner
-$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATH_TEST_SRC)/TestProductionCode.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
-$(PATH_TEST_RUNNERS)/TestProductionCode2_Runner.c: $(PATH_TEST_SRC)/TestProductionCode2.c
-	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
-
-# Building Test Runner
-#$(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c: $(PATH_TEST_SRC)/TestProductionCode.c
-#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATH_TEST_SRC)/TestProductionCode.c $(PATH_TEST_RUNNERS)/TestProductionCode_Runner.c
-#
-#ruby ../Unity/auto/generate_test_runner.rb test-src/TestProductionCode.c  build/test_runners/TestProductionCode_Runner.c
-# Building Test Runner
-#$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(PATH_TEST_SRC)/Test%.c
-#	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $(PATH_TEST_SRC)/Test%.c  $(PATH_TEST_RUNNERS)/Test%_Runner.c
-
+#	-./$< > $@ 2>&1
 
 #Link Test Code.
-$(PATH_TEST_BUILD)/test%: $(PATH_TEST_OBJECTS)/Test%.$(OBJEXT) $(PATH_TEST_OBJECTS)/Test%_Runner.$(OBJEXT) $(PATH_TEST_OBJECTS)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATH_TEST_DEPS)Test%.$(DEPEXT)
+$(PATH_TEST_BUILD)/Test%$(TARGET_EXTENSION) : $(PATH_TEST_OBJECTS)/Test%.$(OBJEXT) $(PATH_TEST_OBJECTS)/test_runners/Test%_Runner.$(OBJEXT) $(PATH_TEST_OBJECTS)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATH_TEST_DEPS)Test%.$(DEPEXT)
 	@echo "Linking Test.... $(PATH_TEST_BUILD)/$@"
 	$(CC) -o $@ $^
 
+$(PATH_TEST_RUNNERS)/Test%_Runner.c: $(TEST_SRC_DIRS)/Test%.c
+	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
 
-
-
-define compile.prod =
-@mkdir -p $(dir $@)
-@echo " Compiling....  $@"
-$(CC) $(CFLAGS) $(INC) -c -o $@ $<
-@echo "Generating dependency's...."
-@$(CC) $(CFLAGS) $(INCDEP) -MM $(SRC_DIRS)/$*.$(SRCEXT) > $(BUILDDIR)/$*.$(DEPEXT)
-@cp -f $(BUILDDIR)/$*.$(DEPEXT) $(BUILDDIR)/$*.$(DEPEXT).tmp
-@sed -e 's|.*:|$(BUILDDIR)/$*.$(OBJEXT):|' < $(BUILDDIR)/$*.$(DEPEXT).tmp > $(BUILDDIR)/$*.$(DEPEXT)
-@sed -e 's/.*://' -e 's/\\$$//' < $(BUILDDIR)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(BUILDDIR)/$*.$(DEPEXT)
-@rm -f $(BUILDDIR)/$*.$(DEPEXT).tmp
-endef
-
-define compile.test =
-@mkdir -p $(dir $@)
-@echo " Compiling....  $@"
-$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
-@echo "Generating dependency's...."
-$(CC)  $(CFLAGS) $(INCDEP) -MM -MG -MF $(PATH_TEST_DEPS)/$*.$(DEPEXT) $<
-@cp -f $(PATH_TEST_DEPS)/$*.$(DEPEXT) $(PATH_TEST_DEPS)/$*.$(DEPEXT).tmp
-@sed -e 's|.*:|$(PATH_TEST_OBJECTS)/$*.$(OBJEXT):|' < $(PATH_TEST_DEPS)/$*.$(DEPEXT).tmp > $(PATH_TEST_DEPS)/$*.$(DEPEXT)
-@sed -e 's/.*://' -e 's/\\$$//' < $(PATH_TEST_DEPS)/$*.$(DEPEXT).tmp | fmt -1 | sed -e 's/^ *//' -e 's/$$/:/' >> $(PATH_TEST_DEPS)/$*.$(DEPEXT)
-@rm -f $(PATH_TEST_DEPS)/$*.$(DEPEXT).tmp
-endef
-
-#Compile
-$(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
-	$(compile.prod)
-
-$(PATH_TEST_OBJECTS)/%.$(OBJEXT):: $(PATH_TEST_SRC)/%.$(TESTEXT)
-	$(compile.test)
-
-$(PATH_TEST_OBJECTS)/%.$(OBJEXT):: $(PATH_TEST_RUNNERS)/%.$(TESTEXT)
-	$(compile.test)
-	
-$(PATH_TEST_OBJECTS)/%.$(OBJEXT):: $(SRC_DIRS)/%.$(TESTEXT)
-	$(compile.test)
-
-$(PATH_TEST_OBJECTS)/%.$(OBJEXT):: $(UNITY_ROOT)/src/%.c $(UNITY_ROOT)/src/%.h
-	$(compile.test)
-
-#Non-File Targets
-.PHONY: all remake clean resources
+clean:
+	@$(CLEANUP) $(BUILDDIR)
+	@$(CLEANUP) $(TARGETDIR)
+	@$(CLEANUP) $(PATH_TEST_OBJECTS)/*.o
+	@$(CLEANUP) $(PATH_TEST_BUILD)/*
+	@$(CLEANUP) $(PATH_TEST_RESULTS)/*.txt
+	@$(CLEANUP) $(TARGET1) $(TARGET2)
 
 info:
 	@echo "INFO!"
 	@echo "SOURCES=$(SRC_FILES)"
+	@echo "TEST_SRC_FILES=$(TEST_SRC_FILES)"
 	@echo "OBJECTS=$(OBJECTS)"
+	@echo "TEST_OBJECTS=$(TEST_OBJECTS)"
 	@echo "CC=$(CC)"
 	@echo "CFLAGS=$(CFLAGS)"
 	@echo "LDFLAGS=$(LDFLAGS)"
@@ -200,8 +150,38 @@ info:
 	@echo "PATH_TEST_RESULTS=$(PATH_TEST_RESULTS)"
 	@echo "Result command: $(PATH_TEST_RESULTS)/%.$(RESULT_EXT): $(PATH_TEST_BUILD)/%"
 	@echo "UNAME_S= $(UNAME_S)"
+	@echo "TEST_RUNNERS= $(TEST_RUNNERS)"
+	@echo "Result Rule: $(PATH_TEST_RESULTS)/Test%.txt: $(TARGET1) $(TARGET2)"
 
-.PRECIOUS: $(PATH_TEST_BUILD)/test%
-.PRECIOUS: $(PATH_TEST_DEPS)/%.d
-.PRECIOUS: $(PATH_TEST_OBJECTS)/%.o
-.PRECIOUS: $(PATH_TEST_RESULTS)/%.txt
+#Copy Resources from Resources Directory to Target Directory
+resources: directories
+ifneq ($(RESOURCES),)
+	@cp -r $(RESDIR)/* $(TARGETDIR)/
+endif
+
+#Link
+$(COMPONENT_NAME): $(OBJECTS)
+	@mkdir -p $(TARGETDIR)
+	@echo "Build with $(CC)"
+	@echo " Linking... $^"
+	$(CC) -o $(TARGETDIR)/$(COMPONENT_NAME) $^ $(LIB)
+
+#Compile
+$(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling....  $@"
+	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
+	
+#Compile Test Objects
+$(PATH_TEST_OBJECTS)/%.$(OBJEXT): $(TEST_SRC_DIRS)/%.$(TESTEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling Test....  $@"
+	$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
+
+$(PATH_TEST_OBJECTS)/unity.$(OBJEXT): $(UNITY_ROOT)/src/unity.$(TESTEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling Test....  $@"
+	$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
+
+ci: CFLAGS += -Werror
+ci: default
