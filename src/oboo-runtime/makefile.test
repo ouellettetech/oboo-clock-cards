@@ -45,7 +45,7 @@ PATH_TEST_BUILD   := build
 PATH_TEST_DEPS    := build/depends
 PATH_TEST_OBJECTS := build/objs
 PATH_TEST_RESULTS := build/results
-PATH_TEST_RUNNERS := build/test_runners
+PATH_TEST_RUNNERS := test-src/test_runners
 
 PASSED = `grep -s PASS $(PATH_TEST_RESULTS)/*.txt`
 FAIL = `grep -s FAIL $(PATH_TEST_RESULTS)/*.txt`
@@ -78,11 +78,13 @@ SYMBOLS=
 #---------------------------------------------------------
 SRC_FILES      := $(shell find $(SRC_DIRS) -type f -name *.$(SRCEXT))
 TEST_SRC_FILES += $(shell find $(TEST_SRC_DIRS) -type f -name Test*.$(TESTEXT))
+TEST_RUNNERS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RUNNERS)/%,$(TEST_SRC_FILES:.$(SRCEXT)=_Runner.$(OBJEXT)))
 OBJECTS        := $(patsubst $(SRC_DIRS)/%,$(BUILDDIR)/%,$(SRC_FILES:.$(SRCEXT)=.$(OBJEXT)))
-TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_OBJECTS)/%,$(SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
+TEST_OBJECTS   := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_OBJECTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(OBJEXT)))
+TEST_OBJECTS   += $(patsubst $(PATH_TEST_RUNNERS)/%,$(PATH_TEST_OBJECTS)/%,$(TEST_RUNNERS:.$(TESTEXT)=.$(OBJEXT)))
 RESOURCES      := $(shell find $(RESDIR) -type f)
 RESULTS        := $(patsubst $(TEST_SRC_DIRS)/%,$(PATH_TEST_RESULTS)/%,$(TEST_SRC_FILES:.$(TESTEXT)=.$(RESULT_EXT)))
-
+vpath _Runner.$(OBJEXT) $(PATH_TEST_RUNNERS)
 
 # if running on Mac OS enable debugging.
 ifeq ($(UNAME_S),Darwin)
@@ -118,11 +120,17 @@ $(PATH_TEST_RESULTS)/Test%.txt: $(TARGET1) $(TARGET2)
 	echo "PASS 5" > $@ 2>&1
 #	-./$< > $@ 2>&1
 
-$(TARGET1): $(SRC_FILES1)
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
+#Link Test Code.
+$(PATH_TEST_BUILD)/Test%$(TARGET_EXTENSION) : $(PATH_TEST_OBJECTS)/Test%.$(OBJEXT) $(PATH_TEST_OBJECTS)/Test%_Runner.$(OBJEXT) $(PATH_TEST_OBJECTS)/unity.$(OBJEXT) $(BUILDDIR)/%.$(OBJEXT) #$(PATH_TEST_DEPS)Test%.$(DEPEXT)
+	@echo "Linking Test.... $(PATH_TEST_BUILD)/$@"
+	$(CC) -o $@ $^
 
-$(TARGET2): $(SRC_FILES2)
-	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
+
+# $(TARGET1): $(SRC_FILES1)
+# 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES1) -o $(TARGET1)
+
+# $(TARGET2): $(SRC_FILES2)
+# 	$(C_COMPILER) $(CFLAGS) $(INC_DIRS) $(SYMBOLS) $(SRC_FILES2) -o $(TARGET2)
 
 $(PATH_TEST_RUNNERS)/Test%_Runner.c: $(TEST_SRC_DIRS)/Test%.c
 	ruby $(UNITY_ROOT)/auto/generate_test_runner.rb $< $@
@@ -151,6 +159,8 @@ info:
 	@echo "PATH_TEST_RESULTS=$(PATH_TEST_RESULTS)"
 	@echo "Result command: $(PATH_TEST_RESULTS)/%.$(RESULT_EXT): $(PATH_TEST_BUILD)/%"
 	@echo "UNAME_S= $(UNAME_S)"
+	@echo "TEST_RUNNERS= $(TEST_RUNNERS)"
+	@echo "Object Rule: $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)"
 
 #Copy Resources from Resources Directory to Target Directory
 resources: directories
@@ -170,6 +180,13 @@ $(BUILDDIR)/%.$(OBJEXT): $(SRC_DIRS)/%.$(SRCEXT)
 	@mkdir -p $(dir $@)
 	@echo " Compiling....  $@"
 	$(CC) $(CFLAGS) $(INC) -c -o $@ $<
+	
+#Compile Test Objects
+$(PATH_TEST_OBJECTS)/%.$(OBJEXT): $(TEST_SRC_DIRS)/%.$(TESTEXT)
+	@mkdir -p $(dir $@)
+	@echo " Compiling Test....  $@"
+	$(CC) $(CFLAGS) -c $(TEST_INC) $< -o $@
+
 
 ci: CFLAGS += -Werror
 ci: default
